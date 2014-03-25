@@ -1,6 +1,6 @@
 # Batman Refresh
 
-Batman Refresh ([JavaScript](#), [CoffeeScript](#)) is an add-on to batman.js to help your development workflow. It adds a few functions:
+Batman Refresh ([JavaScript](https://raw.githubusercontent.com/rmosolgo/batmanjs-refresh/master/refresh.js), [CoffeeScript](https://raw.githubusercontent.com/rmosolgo/batmanjs-refresh/master/refresh.coffee) is an add-on to batman.js to help your development workflow. It adds a few functions:
 
 - `Batman.refreshHTML` reloads the `source` for all subviews of the layout view.
 - `Batman.refreshCSS` reloads all stylesheets on the page
