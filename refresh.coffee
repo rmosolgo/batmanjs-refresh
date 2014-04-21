@@ -16,32 +16,44 @@ Batman.View::superviewWithSource = ->
   if @get('source')?
     return @
   else
-    return @superview.superviewWithSource()
+    return @?superview.superviewWithSource()
 
-# Climbs the view try to find a souce, then refreshes it.
+# Refresh HTML by finding the next view with a source
+# and refreshing subviews
 Batman.View::refreshHTML = ->
   @sourceView ?= @superviewWithSource()
-  sourceView = @sourceView
-  sourceView.html = undefined
-  path = sourceView.get('source')
+  if @sourceView?
+    @_refreshSourceView()
+  if @subviews?.length
+    @_refreshSubviews()
+
+Batman.View::_refreshSourceView = ->
+  @sourceView.html = undefined
+  path = @sourceView.get('source')
   if path.charAt(0) isnt "/"
     path = "/#{path}"
+  return if path in Batman._refreshed
+  Batman._refreshed.push(path)
   console.log "refreshing #{path}"
   Batman.View.store.unset(path)
-  sourceView._HTMLObserver ?= Batman.View.store.observe path, (nv, ov) =>
-    sourceView.set('html', nv)
-    sourceView.loadView()
-    sourceView.initializeBindings()
+  @sourceView._HTMLObserver ?= Batman.View.store.observe path, (nv, ov) =>
+    @sourceView.set('html', nv)
+    @sourceView.loadView()
+    @sourceView.initializeBindings()
 
-# Tries to refresh all children of the layout view
+Batman.View::_refreshSubviews = ->
+  @subviews.forEach (sv) ->
+    if sv.get('source')?
+      sv.refreshHTML()
+    if sv.subviews?.length
+      sv._refreshSubviews()
+
+# Refresh all HTML, going down from `layout`
 Batman.refreshHTML = ->
-  Batman.currentApp
-    .get('layout.subviews')
-    .filter((sv) -> sv.get('source')?)
-    .forEach((sv) -> sv.refreshHTML())
+  Batman._refreshed = []
+  Batman.currentApp.get('layout').refreshHTML()
 
-# Reload stylesheets
-# from stackoverflow.com/questions/2024486/is-there-an-easy-way-to-reload-css-without-reloading-the-page
+# Refresh all CSS
 Batman.refreshCSS = ->
   queryString = '?reload=' + new Date().getTime();
   refreshed = []
@@ -52,7 +64,7 @@ Batman.refreshCSS = ->
   console.log "refreshed \n#{refreshed.join("\n")}"
   undefined
 
-# Reload the children of the layout and reload stylesheets
+# Refresh both
 Batman.refreshAll = ->
   Batman.refreshHTML()
   Batman.refreshCSS()

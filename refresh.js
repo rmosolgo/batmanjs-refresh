@@ -1,5 +1,6 @@
 (function() {
-  var storeAccessor;
+  var storeAccessor,
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   storeAccessor = Batman.HTMLStore.prototype._batman.getFirst('defaultAccessor');
 
@@ -17,38 +18,60 @@
     if (this.get('source') != null) {
       return this;
     } else {
-      return this.superview.superviewWithSource();
+      return typeof this === "function" ? this(superview.superviewWithSource()) : void 0;
     }
   };
 
   Batman.View.prototype.refreshHTML = function() {
-    var path, sourceView;
+    var _ref;
     if (this.sourceView == null) {
       this.sourceView = this.superviewWithSource();
     }
-    sourceView = this.sourceView;
-    sourceView.html = void 0;
-    path = sourceView.get('source');
+    if (this.sourceView != null) {
+      this._refreshSourceView();
+    }
+    if ((_ref = this.subviews) != null ? _ref.length : void 0) {
+      return this._refreshSubviews();
+    }
+  };
+
+  Batman.View.prototype._refreshSourceView = function() {
+    var path, _base;
+    this.sourceView.html = void 0;
+    path = this.sourceView.get('source');
     if (path.charAt(0) !== "/") {
       path = "/" + path;
     }
+    if (__indexOf.call(Batman._refreshed, path) >= 0) {
+      return;
+    }
+    Batman._refreshed.push(path);
     console.log("refreshing " + path);
     Batman.View.store.unset(path);
-    return sourceView._HTMLObserver != null ? sourceView._HTMLObserver : sourceView._HTMLObserver = Batman.View.store.observe(path, (function(_this) {
+    return (_base = this.sourceView)._HTMLObserver != null ? _base._HTMLObserver : _base._HTMLObserver = Batman.View.store.observe(path, (function(_this) {
       return function(nv, ov) {
-        sourceView.set('html', nv);
-        sourceView.loadView();
-        return sourceView.initializeBindings();
+        _this.sourceView.set('html', nv);
+        _this.sourceView.loadView();
+        return _this.sourceView.initializeBindings();
       };
     })(this));
   };
 
-  Batman.refreshHTML = function() {
-    return Batman.currentApp.get('layout.subviews').filter(function(sv) {
-      return sv.get('source') != null;
-    }).forEach(function(sv) {
-      return sv.refreshHTML();
+  Batman.View.prototype._refreshSubviews = function() {
+    return this.subviews.forEach(function(sv) {
+      var _ref;
+      if (sv.get('source') != null) {
+        sv.refreshHTML();
+      }
+      if ((_ref = sv.subviews) != null ? _ref.length : void 0) {
+        return sv._refreshSubviews();
+      }
     });
+  };
+
+  Batman.refreshHTML = function() {
+    Batman._refreshed = [];
+    return Batman.currentApp.get('layout').refreshHTML();
   };
 
   Batman.refreshCSS = function() {
